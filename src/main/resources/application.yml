@@ -1,0 +1,17 @@
+spring:
+  application:
+    name: cicd
+  config:
+    import:
+      - aws-parameterstore:/cicd/rds/
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: ${DB_URL}
+    username: ${DB_NAME}
+    password: ${DB_PW}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
