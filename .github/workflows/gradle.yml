@@ -52,10 +52,35 @@ jobs:
     - name: Build, tag, and push docker image to Amazon ECR
       env:
         REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-        REPOSITORY: crud
+        REPOSITORY: cicd-ecr
         IMAGE_TAG: ${{ github.sha }}
       run: |
         docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
         docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
-      
+
+    - name: Retrieve most recent ECS task definition JSON file
+      env:
+        TASK_DEFINITION: cicd-task-definition
+      run: |
+        aws ecs describe-task-definition --task-definition $TASK_DEFINITION --query taskDefinition > task-definition.json
+
+    - name: Create ECS task definition
+      id: setting-task-definition
+      uses: aws-actions/amazon-ecs-render-task-definition@v1
+      with:
+        task-definition: task-definition.json
+        container-name: cicd-container
+        image: ${{ env.IMAGE_URI }}
+
+    - name: Clean up task definition file
+      run: |
+        rm task-definition.json
+
+    - name: Deploy Amazon ECS task definition
+      uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+      with:
+        task-definition: ${{ steps.setting-task-definition.outputs.task-definition }}
+        service: cicd-service
+        cluster: cicd-cluster
+        wait-for-service-stability: true
           
